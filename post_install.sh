@@ -12,16 +12,17 @@ NC='\033[0m'
 echo -e "${GREEN}Starting Arch Linux Post-Installation Setup...${NC}"
 
 # Timezone
-echo -e "${YELLOW}Enter your timezone (e.g., America/New_York, Asia/Kolkata):${NC}"
+echo -e "${YELLOW}Enter your timezone (e.g. Asia/Kolkata):${NC}"
 read TIMEZONE
 ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 hwclock --systohc
 
-# Locale
-echo -e "${GREEN}Setting locale...${NC}"
+# Locale & Console Font
+echo -e "${GREEN}Setting locale and console font...${NC}"
 sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "FONT=sun12x22" > /etc/vconsole.conf
 
 # Hostname
 echo -e "${YELLOW}Enter your desired hostname:${NC}"
@@ -32,13 +33,6 @@ cat <<EOF > /etc/hosts
 ::1         localhost
 127.0.1.1   $HOSTNAME.localdomain $HOSTNAME
 EOF
-
-# NetworkManager
-systemctl enable NetworkManager
-
-# Docker & Bluetooth
-systemctl enable docker.service || true
-systemctl enable bluetooth.service || true
 
 # Root password
 echo -e "${YELLOW}Set root password:${NC}"
@@ -66,13 +60,20 @@ PKGS=(
     dosfstools e2fsprogs easyeffects firefox go grim hypridle hyprland 
     hyprlock hyprpaper hyprpolkitagent imv intel-media-driver intel-ucode iw kdeconnect kitty 
     kubectl libva-utils linux-headers lsp-plugins-lv2 mako man-db man-pages mesa minikube mpv 
-    nemo neovim nodejs npm nvme-cli openssh pipewire-pulse power-profiles-daemon python-pywal 
+    nemo neovim nodejs npm nvme-cli openssh pipewire-pulse power-profiles-daemon 
     qt5-wayland qt6-wayland rust slurp sof-firmware swaync telegram-desktop texinfo tree 
     ttf-jetbrains-mono ttf-jetbrains-mono-nerd unzip vulkan-intel waybar wev wget 
     wl-clipboard wofi zsh zsh-autocomplete zsh-completions zsh-syntax-highlighting
+    gnome-boxes
 )
 
 pacman -S --needed --noconfirm "${PKGS[@]}"
+
+# Enable services after packages are installed
+echo -e "${GREEN}Enabling services...${NC}"
+systemctl enable NetworkManager
+systemctl enable docker.service || true
+systemctl enable bluetooth.service || true
 
 USER_SCRIPT="/home/$USERNAME/user_setup.sh"
 
@@ -97,6 +98,14 @@ if ! command -v brillo &> /dev/null; then
     makepkg -si --noconfirm
     cd ~
     rm -rf brillo
+fi
+if ! command -v wal &> /dev/null; then
+    echo -e "\${GREEN}Cloning and building pywal16 from AUR...\${NC}"
+    git clone https://aur.archlinux.org/python-pywal16.git
+    cd python-pywal16
+    makepkg -si --noconfirm
+    cd ~
+    rm -rf python-pywal16
 fi
 
 # 2. Dotfiles Management
@@ -152,10 +161,10 @@ setup_symlinks
 # Ensure default shell is zsh just in case useradd missed it
 sudo chsh -s "\$(which zsh)" "\$USER" || true
 
-# Generate Hyprland colors
-if [ -f "\$HOME/dotfiles/scripts/gen-conf.py" ]; then
-    echo -e "\${GREEN}Generating Hyprland colors using gen-conf.py...\${NC}"
-    python "\$HOME/dotfiles/scripts/gen-conf.py" || true
+# Generate colors with pywal16
+if [ -f "\$HOME/Pictures/aizen.png" ]; then
+    echo -e "\${GREEN}Generating colors using pywal16...\${NC}"
+    wal -i "\$HOME/Pictures/aizen.png"
 fi
 
 echo -e "\${GREEN}User environment setup complete!\${NC}"
@@ -170,4 +179,5 @@ su - "$USERNAME" -c "$USER_SCRIPT"
 rm -f "$USER_SCRIPT"
 
 echo -e "${GREEN}Post-installation complete! You can now exit chroot and reboot.${NC}"
+
 
