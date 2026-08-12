@@ -73,6 +73,13 @@ mount "$ROOT_PART" /mnt
 mkdir -p /mnt/boot/efi
 mount "$EFI_PART" /mnt/boot/efi
 
+# Update mirrors
+echo -e "${GREEN}Installing reflector and updating mirrors...${NC}"
+pacman -Syy --needed --noconfirm reflector curl
+curl -LO https://raw.githubusercontent.com/shivjeet1/dotfiles/master/scripts/update-mirrors.sh
+chmod +x update-mirrors.sh
+./update-mirrors.sh
+
 # Bootstrapping
 echo -e "${GREEN}Installing base system (pacstrap)...${NC}"
 pacstrap /mnt base linux linux-firmware base-devel git sudo networkmanager grub efibootmgr
