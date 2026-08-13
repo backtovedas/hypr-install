@@ -1,4 +1,4 @@
-#!/bin/bash#!/bin/bash
+#!/bin/sh
 # post_install.sh
 
 set -e
