@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/sh
+# core_install.sh
 
 set -e
 
