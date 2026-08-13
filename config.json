@@ -1,0 +1,12 @@
+{
+    "disk": "/dev/vda",
+    "timezone": "Asia/Kolkata",
+    "hostname": "arch",
+    "adduser": "y",
+    "credentials": {
+        "username": "user",
+        "password": "resu",
+        "rootpassword": "resu"
+    }
+}
+

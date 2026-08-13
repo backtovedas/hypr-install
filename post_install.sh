@@ -1,5 +1,4 @@
 #!/bin/bash
-# post_install.sh
 
 set -e
 
@@ -11,9 +10,20 @@ NC='\033[0m'
 
 echo -e "${GREEN}Starting Arch Linux Post-Installation Setup...${NC}"
 
+CONFIG_FILE="/root/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    TIMEZONE=$(jq -r '.timezone // empty' "$CONFIG_FILE")
+    HOSTNAME=$(jq -r '.hostname // empty' "$CONFIG_FILE")
+    ROOT_PASSWORD=$(jq -r '.credentials.rootpassword // empty' "$CONFIG_FILE")
+    USERNAME=$(jq -r '.credentials.username // empty' "$CONFIG_FILE")
+    USER_PASSWORD=$(jq -r '.credentials.password // empty' "$CONFIG_FILE")
+fi
+
 # Timezone
-echo -e "${YELLOW}Enter your timezone (e.g., America/New_York, Asia/Kolkata):${NC}"
-read TIMEZONE
+if [ -z "$TIMEZONE" ] || [ "$TIMEZONE" == "null" ]; then
+    echo -e "${YELLOW}Enter your timezone (e.g., America/New_York, Asia/Kolkata):${NC}"
+    read TIMEZONE
+fi
 ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 hwclock --systohc
 
@@ -25,8 +35,10 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 echo "FONT=sun12x22" > /etc/vconsole.conf
 
 # Hostname
-echo -e "${YELLOW}Enter your desired hostname:${NC}"
-read HOSTNAME
+if [ -z "$HOSTNAME" ] || [ "$HOSTNAME" == "null" ]; then
+    echo -e "${YELLOW}Enter your desired hostname:${NC}"
+    read HOSTNAME
+fi
 echo "$HOSTNAME" > /etc/hostname
 cat <<EOF > /etc/hosts
 127.0.0.1   localhost
@@ -35,15 +47,25 @@ cat <<EOF > /etc/hosts
 EOF
 
 # Root password
-echo -e "${YELLOW}Set root password:${NC}"
-passwd
+if [ -n "$ROOT_PASSWORD" ] && [ "$ROOT_PASSWORD" != "null" ]; then
+    echo "root:$ROOT_PASSWORD" | chpasswd
+else
+    echo -e "${YELLOW}Set root password:${NC}"
+    passwd
+fi
 
 # User setup
-echo -e "${YELLOW}Enter your new username:${NC}"
-read USERNAME
+if [ -z "$USERNAME" ] || [ "$USERNAME" == "null" ]; then
+    echo -e "${YELLOW}Enter your new username:${NC}"
+    read USERNAME
+fi
 useradd -m -G wheel -s /bin/zsh "$USERNAME"
-echo -e "${YELLOW}Set password for $USERNAME:${NC}"
-passwd "$USERNAME"
+if [ -n "$USER_PASSWORD" ] && [ "$USER_PASSWORD" != "null" ]; then
+    echo "$USERNAME:$USER_PASSWORD" | chpasswd
+else
+    echo -e "${YELLOW}Set password for $USERNAME:${NC}"
+    passwd "$USERNAME"
+fi
 
 # Sudo privileges (uncomment wheel group)
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers

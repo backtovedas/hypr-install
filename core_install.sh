@@ -1,5 +1,4 @@
 #!/bin/bash
-# core_install.sh
 
 set -e
 
@@ -21,8 +20,19 @@ fi
 echo -e "${YELLOW}Available disks:${NC}"
 lsblk -d -p -n -l -o NAME,SIZE,MODEL | grep -E '^/dev/sd|^/dev/nvme|^/dev/vd'
 
-echo -e "\n${YELLOW}Enter the disk you want to install Arch Linux on (e.g., /dev/sda, /dev/nvme0n1):${NC}"
-read DISK
+CONFIG_FILE="./config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    if ! command -v jq &> /dev/null; then
+        echo -e "${GREEN}Installing jq to parse config.json...${NC}"
+        pacman -Sy --noconfirm jq
+    fi
+    DISK=$(jq -r '.disk // empty' "$CONFIG_FILE")
+fi
+
+if [ -z "$DISK" ] || [ "$DISK" == "null" ]; then
+    echo -e "\n${YELLOW}Enter the disk you want to install Arch Linux on (e.g., /dev/sda, /dev/nvme0n1):${NC}"
+    read DISK
+fi
 
 if [ ! -b "$DISK" ]; then
     echo -e "${RED}Error: Disk $DISK does not exist.${NC}"
@@ -82,7 +92,7 @@ chmod +x update-mirrors.sh
 
 # Bootstrapping
 echo -e "${GREEN}Installing base system (pacstrap)...${NC}"
-pacstrap /mnt base linux linux-firmware base-devel git sudo networkmanager grub efibootmgr
+pacstrap /mnt base linux linux-firmware base-devel git sudo networkmanager grub efibootmgr jq
 
 # Fstab
 echo -e "${GREEN}Generating fstab...${NC}"
@@ -91,6 +101,9 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # Copy post_install.sh to chroot
 if [ -f "./post_install.sh" ]; then
     cp ./post_install.sh /mnt/root/
+    if [ -f "./config.json" ]; then
+        cp ./config.json /mnt/root/
+    fi
     chmod +x /mnt/root/post_install.sh
     echo -e "${GREEN}Chrooting into the new system to run post_install.sh...${NC}"
     arch-chroot /mnt /root/post_install.sh
