@@ -12,7 +12,7 @@ NC='\033[0m'
 echo -e "${GREEN}Starting Arch Linux Post-Installation Setup...${NC}"
 
 # Timezone
-echo -e "${YELLOW}Enter your timezone (e.g. Asia/Kolkata):${NC}"
+echo -e "${YELLOW}Enter your timezone (e.g., America/New_York, Asia/Kolkata):${NC}"
 read TIMEZONE
 ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 hwclock --systohc
@@ -41,7 +41,7 @@ passwd
 # User setup
 echo -e "${YELLOW}Enter your new username:${NC}"
 read USERNAME
-useradd -m -G wheel,docker -s /bin/zsh "$USERNAME"
+useradd -m -G wheel -s /bin/zsh "$USERNAME"
 echo -e "${YELLOW}Set password for $USERNAME:${NC}"
 passwd "$USERNAME"
 
@@ -68,6 +68,9 @@ PKGS=(
 )
 
 pacman -S --needed --noconfirm "${PKGS[@]}"
+
+# Add user to docker group
+usermod -aG docker "$USERNAME"
 
 # Enable services after packages are installed
 echo -e "${GREEN}Enabling services...${NC}"
@@ -179,5 +182,4 @@ su - "$USERNAME" -c "$USER_SCRIPT"
 rm -f "$USER_SCRIPT"
 
 echo -e "${GREEN}Post-installation complete! You can now exit chroot and reboot.${NC}"
-
 
