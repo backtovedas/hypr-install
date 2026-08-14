@@ -1,9 +1,7 @@
-#!/bin/sh
-# post_install.sh
+!/bin/sh
 
 set -e
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -25,7 +23,6 @@ if [ -z "$USERNAME" ] || [ "$USERNAME" == "null" ]; then
     read USERNAME
 fi
 
-# Check if user already exists
 if id "$USERNAME" &>/dev/null; then
     USER_EXISTS=true
     echo -e "${GREEN}User $USERNAME already exists. Performing standalone unattended installation...${NC}"
@@ -34,9 +31,8 @@ else
 fi
 
 if [ "$USER_EXISTS" = false ]; then
-    # Timezone
     if [ -z "$TIMEZONE" ] || [ "$TIMEZONE" == "null" ]; then
-        echo -e "${YELLOW}Enter your timezone (e.g., America/New_York, Asia/Kolkata):${NC}"
+        echo -e "${YELLOW}Enter your timezone (e.g., Asia/Kolkata, America/New_York):${NC}"
         read TIMEZONE
     fi
     ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
@@ -49,9 +45,8 @@ if [ "$USER_EXISTS" = false ]; then
     echo "LANG=en_US.UTF-8" > /etc/locale.conf
     echo "FONT=sun12x22" > /etc/vconsole.conf
 
-    # Hostname
     if [ -z "$HOSTNAME" ] || [ "$HOSTNAME" == "null" ]; then
-        echo -e "${YELLOW}Enter your desired hostname:${NC}"
+	    echo -e "${YELLOW}Enter your desired hostname(i.e. PC Name):${NC}"
         read HOSTNAME
     fi
     echo "$HOSTNAME" > /etc/hostname
@@ -61,7 +56,6 @@ if [ "$USER_EXISTS" = false ]; then
 127.0.1.1   $HOSTNAME.localdomain $HOSTNAME
 EOF
 
-    # Root password
     if [ -n "$ROOT_PASSWORD" ] && [ "$ROOT_PASSWORD" != "null" ]; then
         echo "root:$ROOT_PASSWORD" | chpasswd
     else
@@ -87,9 +81,7 @@ EOF
     grub-mkconfig -o /boot/grub/grub.cfg
 fi
 
-# Temporarily allow passwordless sudo for unattended AUR package installation
 echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/99-wheel-nopasswd
-# Ensure it gets removed even if the script fails midway (error handling)
 trap 'rm -f /etc/sudoers.d/99-wheel-nopasswd' EXIT
 
 # Update mirrors
@@ -100,7 +92,6 @@ chmod +x update-mirrors.sh
 ./update-mirrors.sh || true
 rm -f update-mirrors.sh
 
-# Install packages from the user's specific list
 echo -e "${GREEN}Installing requested packages...${NC}"
 PKGS=(
     bluez bluez-utils brightnessctl calf cava cmake docker docker-buildx docker-compose 
@@ -119,7 +110,6 @@ pacman -S --needed --noconfirm "${PKGS[@]}"
 # Add user to docker group
 usermod -aG docker "$USERNAME"
 
-# Enable services after packages are installed
 echo -e "${GREEN}Enabling services...${NC}"
 systemctl enable NetworkManager || true
 systemctl enable docker.service || true
@@ -160,7 +150,7 @@ if ! command -v wal &> /dev/null; then
     rm -rf python-pywal16
 fi
 
-# 2. Dotfiles Management
+# 2. Dotfiles
 echo -e "\${GREEN}Cloning and linking dotfiles...\${NC}"
 DOTFILES_REPO="https://github.com/shivjeet1/dotfiles.git"
 
@@ -176,7 +166,6 @@ setup_symlinks() {
     
     mkdir -p ~/.config
     
-    # Intelligently symlink directories from dotfiles
     if [ -d "\$HOME/dotfiles/.config" ]; then
         # If there's a direct .config folder, link its contents
         for item in "\$HOME/dotfiles/.config/"*; do
@@ -185,7 +174,6 @@ setup_symlinks() {
             fi
         done
     else
-        # Otherwise, link directories from the root of the repo (like hypr, waybar, kitty)
         for dir in "\$HOME/dotfiles/"*; do
             basename="\$(basename "\$dir")"
             if [ -d "\$dir" ] && [[ "\$basename" != ".git" ]]; then
@@ -194,7 +182,6 @@ setup_symlinks() {
         done
     fi
     
-    # Explicitly handle .zshrc
     if [ -f "\$HOME/dotfiles/.zshrc" ]; then
         ln -sfn "\$HOME/dotfiles/.zshrc" ~/.zshrc
     fi
@@ -210,7 +197,6 @@ setup_symlinks() {
 
 setup_symlinks
 
-# Ensure default shell is zsh just in case useradd missed it
 sudo chsh -s "\$(which zsh)" "\$USER" || true
 
 # Generate colors with pywal16
@@ -233,6 +219,6 @@ rm -f "$USER_SCRIPT"
 if [ "$USER_EXISTS" = false ]; then
     echo -e "${GREEN}Post-installation complete! You can now exit chroot and reboot.${NC}"
 else
-    echo -e "${GREEN}Standalone unattended installation complete!${NC}"
+    echo -e "${GREEN}Unattended installation of Hyprland@shivjeet1 is complete!${NC}"
 fi
 

@@ -1,13 +1,11 @@
 #!/bin/sh
-# core_install.sh
 
 set -e
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
+NC='\033[0m' 
 
 echo -e "${GREEN}Starting Arch Linux Core Installation...${NC}"
 
@@ -47,20 +45,18 @@ if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
-# Unmount if anything is mounted (prevent errors)
 umount -R /mnt 2>/dev/null || true
 
 # Partitioning using parted
 echo -e "${GREEN}Partitioning $DISK using parted...${NC}"
 wipefs -af "$DISK"
-
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart "EFI" fat32 1MiB 513MiB
 parted -s "$DISK" set 1 esp on
 parted -s "$DISK" mkpart "SWAP" linux-swap 513MiB 4609MiB
 parted -s "$DISK" mkpart "ROOT" ext4 4609MiB 100%
 
-# Handle NVMe/Loop naming convention (p1, p2, p3 vs 1, 2, 3)
+# NVMe/Loop naming convention (p1, p2, p3 vs 1, 2, 3)
 if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *loop* ]] || [[ "$DISK" == *mmcblk* ]]; then
     PART_PREFIX="${DISK}p"
 else
